@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>儲備教官甄選學科測驗 — 答題卷</title>
+<title>學科測驗 — 答題卷</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -195,6 +195,57 @@
   .batch-nav-btns button{
     padding:6px 12px;
     font-size:13px;
+  }
+
+  /* review shell */
+  .review-shell{
+    background:linear-gradient(90deg, #f6ece8, #f1e6d9);
+    border:1px solid var(--stamp);
+    border-top:none;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .review-icon{
+    font-size:16px;
+    color:var(--stamp);
+    flex-shrink:0;
+  }
+  .review-text{
+    font-family:'Roboto Mono', monospace;
+    font-size:12.5px;
+    color:var(--stamp-2);
+    flex:1;
+    font-weight:700;
+  }
+  .review-btn{
+    background:var(--stamp);
+    border:2px solid var(--stamp);
+    padding:8px 16px;
+    font-size:13px;
+  }
+  .review-btn:hover{ background:var(--stamp-2); border-color:var(--stamp-2); }
+  .review-btn:disabled{
+    background:#c9bfae;
+    border-color:#c9bfae;
+    color:#8a8272;
+    cursor:not-allowed;
+  }
+  .review-banner{
+    max-width:100%;
+    margin:0 0 18px;
+    padding:12px 16px;
+    background:linear-gradient(90deg, #f6ece8, #f1e6d9);
+    border:1px solid var(--stamp);
+    color:var(--stamp-2);
+    font-family:'Roboto Mono', monospace;
+    font-size:13px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:8px;
   }
 
   main{
@@ -414,9 +465,9 @@
 <body>
 
 <header>
-  <div class="eyebrow">國軍防空砲兵部隊訓練中心</div>
-  <h1>儲備教官甄選學科測驗</h1>
-  <div class="subtitle">出處：空軍學校軍事學科教官訓練手冊（第二版）｜共 100 題</div>
+  <div class="eyebrow">儲備教官甄選</div>
+  <h1>學科測驗</h1>
+  <div class="subtitle">題庫（共 100 題）</div>
   <div class="meta-row">
     <span>題庫版本：選項亂數重排</span>
     <span id="metaTimer">作答時間：00:00</span>
@@ -428,7 +479,7 @@
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     <div class="progress-count" id="progressCount">0 / 100</div>
   </div>
-  <div class="batch-shell">
+  <div class="batch-shell" id="batchShell">
     <span class="batch-label">分批：</span>
     <div class="batch-tabs" id="batchTabs"></div>
     <div class="batch-nav-btns">
@@ -436,14 +487,25 @@
       <button class="secondary" id="nextBatch">下一批 →</button>
     </div>
   </div>
+  <div class="review-shell" id="reviewShell">
+    <span class="review-icon">✎</span>
+    <span class="review-text" id="reviewText">目前沒有錯題需要複習</span>
+    <button class="review-btn" id="startReviewBtn" disabled>開始複習錯題</button>
+  </div>
 </div>
 
 <main id="quizContainer"></main>
 
-<div class="control-bar">
+<div class="control-bar" id="normalControls">
   <button id="submitBtn">批改本批（<span id="submitBatchLabel">1-10</span>）</button>
   <button class="secondary" id="submitAllBtn">批改全部 100 題</button>
   <button class="secondary" id="resetBtn">重新作答</button>
+</div>
+
+<div class="control-bar" id="reviewControls" style="display:none;">
+  <button id="submitReviewBtn">批改複習</button>
+  <button class="secondary" id="reshuffleReviewBtn">重新洗牌複習題</button>
+  <button class="secondary" id="backToAllBtn">返回完整測驗</button>
 </div>
 
 <div class="result-panel" id="resultPanel">
@@ -584,11 +646,15 @@ const questions = RAW.map((row, idx) => {
   return {
     num: idx+1,
     text, ref,
+    originalCorrect,
     options: shuffledOpts,
     correctIndex,
     selected: null
   };
 });
+
+const wrongSet = new Set(); // question nums that need review (last graded as wrong or blank)
+let reviewMode = false;
 
 const BATCH_SIZE = 10;
 const totalBatches = Math.ceil(questions.length / BATCH_SIZE);
@@ -599,6 +665,64 @@ const progressFill = document.getElementById('progressFill');
 const progressCount = document.getElementById('progressCount');
 const batchTabs = document.getElementById('batchTabs');
 const submitBatchLabel = document.getElementById('submitBatchLabel');
+const batchShell = document.getElementById('batchShell');
+const reviewText = document.getElementById('reviewText');
+const startReviewBtn = document.getElementById('startReviewBtn');
+const normalControls = document.getElementById('normalControls');
+const reviewControls = document.getElementById('reviewControls');
+
+function updateReviewUI(){
+  const n = wrongSet.size;
+  if(n === 0){
+    reviewText.textContent = '目前沒有錯題需要複習';
+    startReviewBtn.disabled = true;
+    startReviewBtn.textContent = '開始複習錯題';
+  } else {
+    reviewText.textContent = `已彙整 ${n} 題答錯／未答的題目`;
+    startReviewBtn.disabled = false;
+    startReviewBtn.textContent = `開始複習錯題 (${n})`;
+  }
+}
+
+function reshuffleQuestion(q){
+  const order = shuffle([0,1,2,3]);
+  const newOpts = order.map(i => q.options[i]);
+  q.options = newOpts;
+  q.correctIndex = newOpts.indexOf(q.originalCorrect);
+  q.selected = null;
+}
+
+function enterReviewMode(){
+  if(wrongSet.size === 0) return;
+  reviewMode = true;
+  batchShell.style.display = 'none';
+  normalControls.style.display = 'none';
+  reviewControls.style.display = 'flex';
+  const list = questions.filter(q => wrongSet.has(q.num));
+  list.forEach(reshuffleQuestion);
+  renderQuestions(list, true);
+  document.getElementById('resultPanel').classList.remove('show');
+  window.scrollTo({top: document.querySelector('.progress-wrap').offsetTop - 8, behavior:'smooth'});
+}
+
+function exitReviewMode(){
+  reviewMode = false;
+  batchShell.style.display = 'flex';
+  normalControls.style.display = 'flex';
+  reviewControls.style.display = 'none';
+  document.getElementById('resultPanel').classList.remove('show');
+  renderBatch();
+}
+
+startReviewBtn.addEventListener('click', enterReviewMode);
+document.getElementById('backToAllBtn').addEventListener('click', exitReviewMode);
+document.getElementById('reshuffleReviewBtn').addEventListener('click', () => {
+  const list = questions.filter(q => wrongSet.has(q.num));
+  if(list.length === 0) return;
+  list.forEach(reshuffleQuestion);
+  renderQuestions(list, true);
+  document.getElementById('resultPanel').classList.remove('show');
+});
 
 function batchRange(batchIdx){
   const start = batchIdx * BATCH_SIZE;
@@ -643,8 +767,14 @@ document.getElementById('nextBatch').addEventListener('click', () => {
   renderBatch();
 });
 
-function renderQuestions(list){
+function renderQuestions(list, isReview){
   container.innerHTML = '';
+  if(isReview){
+    const banner = document.createElement('div');
+    banner.className = 'review-banner';
+    banner.innerHTML = `<span>✎</span><span>錯題複習模式：以下共 ${list.length} 題，選項已重新洗牌，答對後將從錯題本移除</span>`;
+    container.appendChild(banner);
+  }
   list.forEach(q => {
     const card = document.createElement('div');
     card.className = 'q-card';
@@ -690,7 +820,7 @@ function selectOption(q, i){
     el.classList.toggle('selected', Number(el.dataset.index) === i);
   });
   updateProgress();
-  renderTabs();
+  if(!reviewMode) renderTabs();
 }
 
 function updateProgress(){
@@ -744,17 +874,24 @@ function showResult(list, correct, wrong, blank){
   document.getElementById('resultPanel').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
+function recordWrongState(q, r){
+  if(r === 'correct') wrongSet.delete(q.num);
+  else wrongSet.add(q.num); // 'wrong' or 'blank' both need review
+}
+
 document.getElementById('submitBtn').addEventListener('click', () => {
   const [start,end] = batchRange(currentBatch);
   const list = questions.slice(start,end);
   let correct = 0, wrong = 0, blank = 0;
   list.forEach(q => {
     const r = gradeCard(q);
+    recordWrongState(q, r);
     if(r === 'correct') correct++;
     else if(r === 'wrong') wrong++;
     else blank++;
   });
   renderTabs();
+  updateReviewUI();
   showResult(list, correct, wrong, blank);
 });
 
@@ -768,19 +905,36 @@ document.getElementById('submitAllBtn').addEventListener('click', () => {
     } else {
       r = q.selected === null ? 'blank' : (q.selected === q.correctIndex ? 'correct' : 'wrong');
     }
+    recordWrongState(q, r);
     if(r === 'correct') correct++;
     else if(r === 'wrong') wrong++;
     else blank++;
   });
   clearInterval(timerInterval);
   renderTabs();
+  updateReviewUI();
   showResult(questions, correct, wrong, blank);
+});
+
+document.getElementById('submitReviewBtn').addEventListener('click', () => {
+  const list = questions.filter(q => wrongSet.has(q.num));
+  let correct = 0, wrong = 0, blank = 0;
+  list.forEach(q => {
+    const r = gradeCard(q);
+    recordWrongState(q, r);
+    if(r === 'correct') correct++;
+    else if(r === 'wrong') wrong++;
+    else blank++;
+  });
+  updateReviewUI();
+  showResult(list, correct, wrong, blank);
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
   location.reload();
 });
 
+updateReviewUI();
 renderBatch();
 </script>
 </body>
