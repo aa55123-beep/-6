@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>學科測驗 — 答題卷</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1EDE1;
+    --paper-2:#E7E1D0;
+    --ink:#2A2A22;
+    --ink-soft:#5B5A4E;
+    --olive:#55603F;
+    --olive-deep:#3C4530;
+    --line:#C9C1A6;
+    --stamp:#A13D2B;
+    --stamp-2:#8A3323;
+    --correct:#3F6B4A;
+    --wrong:#A13D2B;
+    --gold:#9C7A32;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 800px at 10% -10%, #F6F2E7 0%, transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans TC', sans-serif;
+    line-height:1.6;
+    padding-bottom:80px;
+  }
+  ::selection{ background:var(--gold); color:#fff; }
+
+  /* header */
+  header{
+    position:relative;
+    padding:52px 24px 40px;
+    border-bottom:3px double var(--olive-deep);
+    background:
+      repeating-linear-gradient(135deg, rgba(85,96,63,0.045) 0 2px, transparent 2px 14px),
+      var(--paper);
+    overflow:hidden;
+  }
+  .eyebrow{
+    font-family:'Roboto Mono', monospace;
+    font-size:12px;
+    letter-spacing:.22em;
+    color:var(--olive);
+    text-transform:uppercase;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    justify-content:center;
+    margin-bottom:14px;
+  }
+  .eyebrow::before, .eyebrow::after{
+    content:'';
+    height:1px;
+    width:36px;
+    background:var(--olive);
+    opacity:.5;
+  }
+  h1{
+    font-family:'Noto Serif TC', serif;
+    font-weight:900;
+    text-align:center;
+    font-size:clamp(26px, 4.4vw, 42px);
+    margin:0 0 10px;
+    color:var(--olive-deep);
+    letter-spacing:.03em;
+  }
+  .subtitle{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:14px;
+    font-family:'Roboto Mono', monospace;
+    letter-spacing:.04em;
+  }
+  .meta-row{
+    max-width:760px;
+    margin:26px auto 0;
+    display:flex;
+    justify-content:space-between;
+    font-family:'Roboto Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    border-top:1px solid var(--line);
+    padding-top:14px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  /* progress bar - "answer sheet fill" */
+  .progress-wrap{
+    max-width:760px;
+    margin:18px auto 0;
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+  .progress-shell{
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    box-shadow:0 6px 16px -10px rgba(0,0,0,.3);
+    backdrop-filter:blur(2px);
+  }
+  .progress-track{
+    flex:1;
+    height:8px;
+    background:repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 8px), #ded6bc;
+    position:relative;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--olive), var(--olive-deep));
+    transition:width .25s ease;
+  }
+  .progress-count{
+    font-family:'Roboto Mono', monospace;
+    font-size:13px;
+    white-space:nowrap;
+    font-weight:700;
+    color:var(--olive-deep);
+    min-width:74px;
+    text-align:right;
+  }
+
+  /* batch nav */
+  .batch-shell{
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-top:none;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .batch-label{
+    font-family:'Roboto Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:.08em;
+    flex-shrink:0;
+  }
+  .batch-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    flex:1;
+  }
+  .batch-tab{
+    font-family:'Roboto Mono', monospace;
+    font-size:12px;
+    font-weight:700;
+    padding:5px 9px;
+    border:1px solid var(--line);
+    background:#fbf9f2;
+    color:var(--ink-soft);
+    cursor:pointer;
+    position:relative;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .batch-tab:hover{ border-color:var(--olive); color:var(--olive-deep); }
+  .batch-tab.active{
+    background:var(--olive-deep);
+    border-color:var(--olive-deep);
+    color:#fff;
+  }
+  .batch-tab .dot{
+    display:inline-block;
+    width:6px; height:6px;
+    border-radius:50%;
+    margin-left:6px;
+    background:var(--line);
+    vertical-align:middle;
+  }
+  .batch-tab.done .dot{ background:var(--olive); }
+  .batch-tab.active .dot{ background:#fff; }
+  .batch-nav-btns{
+    display:flex;
+    gap:6px;
+    flex-shrink:0;
+  }
+  .batch-nav-btns button{
+    padding:6px 12px;
+    font-size:13px;
+  }
+
+  /* review shell */
+  .review-shell{
+    background:linear-gradient(90deg, #f6ece8, #f1e6d9);
+    border:1px solid var(--stamp);
+    border-top:none;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .review-icon{
+    font-size:16px;
+    color:var(--stamp);
+    flex-shrink:0;
+  }
+  .review-text{
+    font-family:'Roboto Mono', monospace;
+    font-size:12.5px;
+    color:var(--stamp-2);
+    flex:1;
+    font-weight:700;
+  }
+  .review-btn{
+    background:var(--stamp);
+    border:2px solid var(--stamp);
+    padding:8px 16px;
+    font-size:13px;
+  }
+  .review-btn:hover{ background:var(--stamp-2); border-color:var(--stamp-2); }
+  .review-btn:disabled{
+    background:#c9bfae;
+    border-color:#c9bfae;
+    color:#8a8272;
+    cursor:not-allowed;
+  }
+  .review-banner{
+    max-width:100%;
+    margin:0 0 18px;
+    padding:12px 16px;
+    background:linear-gradient(90deg, #f6ece8, #f1e6d9);
+    border:1px solid var(--stamp);
+    color:var(--stamp-2);
+    font-family:'Roboto Mono', monospace;
+    font-size:13px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  main{
+    max-width:760px;
+    margin:0 auto;
+    padding:30px 20px 0;
+  }
+
+  /* question card */
+  .q-card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    padding:22px 20px 20px;
+    margin-bottom:18px;
+    position:relative;
+  }
+  .q-card::before{
+    content:'';
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:4px;
+    background:var(--line);
+    transition:background .2s ease;
+  }
+  .q-card.answered::before{ background:var(--olive); }
+  .q-card.correct::before{ background:var(--correct); }
+  .q-card.wrong::before{ background:var(--wrong); }
+
+  .q-head{
+    display:flex;
+    gap:12px;
+    align-items:baseline;
+    margin-bottom:12px;
+  }
+  .q-num{
+    font-family:'Roboto Mono', monospace;
+    font-weight:700;
+    font-size:14px;
+    color:#fff;
+    background:var(--olive-deep);
+    padding:3px 9px;
+    min-width:38px;
+    text-align:center;
+    flex-shrink:0;
+  }
+  .q-text{
+    font-size:16px;
+    font-weight:500;
+    color:var(--ink);
+  }
+  .q-ref{
+    font-family:'Roboto Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-left:50px;
+    margin-top:-6px;
+    margin-bottom:10px;
+    opacity:.75;
+  }
+
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-left:50px;
+  }
+  .opt{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:9px 12px;
+    border:1px solid var(--line);
+    background:#fbf9f2;
+    cursor:pointer;
+    font-size:14.5px;
+    transition:background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .opt:hover{ border-color:var(--olive); background:#f4efdf; }
+  .opt:active{ transform:scale(.997); }
+  .opt-letter{
+    font-family:'Roboto Mono', monospace;
+    font-weight:700;
+    color:var(--olive-deep);
+    border:1px solid var(--olive-deep);
+    width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    font-size:12px;
+    background:#fff;
+  }
+  .opt.selected{
+    border-color:var(--olive-deep);
+    background:#e9e4cf;
+  }
+  .opt.selected .opt-letter{
+    background:var(--olive-deep);
+    color:#fff;
+  }
+  .q-card.graded .opt{ cursor:default; }
+  .q-card.graded .opt.reveal-correct{
+    border-color:var(--correct);
+    background:#e7f0e8;
+  }
+  .q-card.graded .opt.reveal-correct .opt-letter{
+    background:var(--correct); color:#fff; border-color:var(--correct);
+  }
+  .q-card.graded .opt.reveal-wrong{
+    border-color:var(--wrong);
+    background:#f5e7e4;
+  }
+  .q-card.graded .opt.reveal-wrong .opt-letter{
+    background:var(--wrong); color:#fff; border-color:var(--wrong);
+  }
+
+  .q-status{
+    margin-left:50px;
+    margin-top:8px;
+    font-family:'Roboto Mono', monospace;
+    font-size:12px;
+    display:none;
+    gap:6px;
+    align-items:center;
+  }
+  .q-card.graded .q-status{ display:flex; }
+  .q-status.ok{ color:var(--correct); }
+  .q-status.bad{ color:var(--wrong); }
+
+  /* control bar */
+  .control-bar{
+    max-width:760px;
+    margin:26px auto 0;
+    padding:0 20px;
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  button{
+    font-family:'Noto Sans TC', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    padding:13px 26px;
+    border:2px solid var(--olive-deep);
+    background:var(--olive-deep);
+    color:#fff;
+    cursor:pointer;
+    letter-spacing:.04em;
+    transition:background .15s ease, transform .1s ease;
+  }
+  button:hover{ background:var(--olive); }
+  button:active{ transform:scale(.98); }
+  button.secondary{
+    background:transparent;
+    color:var(--olive-deep);
+  }
+  button.secondary:hover{ background:rgba(85,96,63,.08); }
+  button:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
+
+  /* result stamp */
+  .result-panel{
+    max-width:760px;
+    margin:30px auto 0;
+    padding:20px;
+    display:none;
+  }
+  .result-panel.show{ display:block; }
+  .stamp-box{
+    border:3px double var(--olive-deep);
+    background:var(--paper-2);
+    padding:34px 24px;
+    text-align:center;
+    position:relative;
+  }
+  .stamp{
+    display:inline-block;
+    border:5px solid var(--stamp);
+    color:var(--stamp);
+    border-radius:50%;
+    width:150px; height:150px;
+    font-family:'Noto Serif TC', serif;
+    font-weight:900;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    transform:rotate(-8deg);
+    margin:0 auto 18px;
+    opacity:.92;
+  }
+  .stamp .score-num{ font-size:38px; line-height:1; }
+  .stamp .score-label{ font-family:'Roboto Mono', monospace; font-size:11px; letter-spacing:.15em; margin-top:4px;}
+  .result-detail{
+    font-family:'Roboto Mono', monospace;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .result-detail b{ color:var(--olive-deep); }
+
+  footer{
+    text-align:center;
+    font-family:'Roboto Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    padding:40px 20px 10px;
+    opacity:.7;
+  }
+
+  @media (max-width:480px){
+    .q-ref, .options, .q-status{ margin-left:0; margin-top:8px; }
+    .q-head{ flex-wrap:wrap; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">儲備教官甄選</div>
+  <h1>學科測驗</h1>
+  <div class="subtitle">題庫（共 100 題）</div>
+  <div class="meta-row">
+    <span>題庫版本：選項亂數重排</span>
+    <span id="metaTimer">作答時間：00:00</span>
+  </div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-shell">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-count" id="progressCount">0 / 100</div>
+  </div>
+  <div class="batch-shell" id="batchShell">
+    <span class="batch-label">分批：</span>
+    <div class="batch-tabs" id="batchTabs"></div>
+    <div class="batch-nav-btns">
+      <button class="secondary" id="prevBatch">← 上一批</button>
+      <button class="secondary" id="nextBatch">下一批 →</button>
+    </div>
+  </div>
+  <div class="review-shell" id="reviewShell">
+    <span class="review-icon">✎</span>
+    <span class="review-text" id="reviewText">目前沒有錯題需要複習</span>
+    <button class="review-btn" id="startReviewBtn" disabled>開始複習錯題</button>
+  </div>
+</div>
+
+<main id="quizContainer"></main>
+
+<div class="control-bar" id="normalControls">
+  <button id="submitBtn">批改本批（<span id="submitBatchLabel">1-10</span>）</button>
+  <button class="secondary" id="submitAllBtn">批改全部 100 題</button>
+  <button class="secondary" id="resetBtn">重新作答</button>
+</div>
+
+<div class="control-bar" id="reviewControls" style="display:none;">
+  <button id="submitReviewBtn">批改複習</button>
+  <button class="secondary" id="reshuffleReviewBtn">重新洗牌複習題</button>
+  <button class="secondary" id="backToAllBtn">返回完整測驗</button>
+</div>
+
+<div class="result-panel" id="resultPanel">
+  <div class="stamp-box">
+    <div class="stamp">
+      <div class="score-num" id="scoreNum">0</div>
+      <div class="score-label">分 / 100</div>
+    </div>
+    <div class="result-detail">
+      答對 <b id="correctCount">0</b> 題　答錯 <b id="wrongCount">0</b> 題　未作答 <b id="blankCount">0</b> 題
+    </div>
+  </div>
+</div>
+
+<footer>本測驗選項已隨機重新排列，正確答案不固定為 A。</footer>
+
+<script>
+const RAW = [
+["空軍教育構想，期以下列何種優勢，戰勝敵人？","P.1-02",["質","量","強","多"]],
+["空軍教育內涵係以哲學、科學及何者為主旨？","P.1-02",["兵學","倫語","孟子","法家思想"]],
+["空軍教育內涵係以思想、武德及何者為重心？","P.1-02",["武藝","哲學","科學","兵學"]],
+["空軍教育，非但使學生能「接受」與「保持」其所學，其最終要求為何者其所學？","P.1-03",["發揮","使用","利用","思考"]],
+["空軍教學過程中，尤著重使學生何者教學活動，惟有從實際行動中去學習，才能學以致用？","P.1-03",["參與","善用","接受","保持"]],
+["空軍教學活動中，能做才是？","P.1-03",["真知","假知","虛知","無知"]],
+["空軍教育之基本的教學原則「寓學於行」，此即　蔣公所昭示的？","P.1-03",["力行哲學","寓教於樂","知行合一","全部皆非"]],
+["教育的目的應該注重教育組織，教育內容及教學方法等均須以何者為依歸？","P.2-02",["社會化","國際化","家庭化","團體化"]],
+["教官(師)必須具備何者，方能使教學深入淺出，融會貫通？","P.2-08",["豐富的學識","高尚的品德","朝氣蓬勃，滿面春風","健康的體格"]],
+["何者是領導的最佳方法，故須主動為部屬盡心力、出主意、想辦法？","P.2-14",["服務","高壓","放任","權威"]],
+["何者雖可立即壓制不良行為，但只是暫時性的，無法徹底根除？","P.2-16",["懲罰","獎勵","放任","警告"]],
+["奧斯貝爾強調有意義的學習，在教學上偏重何種教學法，此種教學法可以讓學習者在有限的時間之內，獲得大量的知識或概念？","P.2-18",["講解式","協同式","練習式","討論式"]],
+["何者的應用有助於教官(師)在教學中了解學員(生)的學習狀況？","P.2-21",["發問","觀察","考試","學習技巧"]],
+["使用何者有助於學習者在自由學習氣氛中保證學有所得？","P.2-23",["學習契約","教具","教材","教室常規"]],
+["羅吉斯認為何者是促進學習制約有效方式？","P.2-24",["同儕教學","協同教學","個人教學","放任教學"]],
+["「刺激與反應之聯結，隨練習次數的多寡影響連結強弱」係屬桑代克定律之何者？","P.3-16",["練習律","準備律","效果律","因果律"]],
+["「反應後獲得獎賞，將使刺激-反應聯結增強」為桑代克三定律中的何者？","P.3-16",["效果律","練習律","準備律","影響律"]],
+["「刺激與反應之聯結，隨練習次數的多寡影響連結強弱」為桑代克三定律中的何者？","P.3-16",["練習律","準備律","效果律","影響律"]],
+["「刺激與反應之聯結，若在準備狀況下反應獲得滿足，會使聯結較強」為桑代克三定律中的何者？","P.3-16",["準備律","練習律","效果律","影響律"]],
+["強化物出現有助該反應頻率增加者，此強化作用稱為？","P.3-17",["正強化","負強化","後效強化","前強化"]],
+["負強化物消失有助於該反應次數增加者，其所形成的強化作用稱為？","P.3-17",["負強化","後效強化","正強化","前強化"]],
+["個體表現正確反應後，立即提供強化物稱為？","P.3-18",["立即強化","延宕強化","連續強化","部分強化"]],
+["個體表現正確反應後，過一段時間才提供強化物稱為？","P.3-18",["延宕強化","立即強化","連續強化","部分強化"]],
+["每次個體出現正確反應之後，均提供強化物稱為？","P.3-18",["連續強化","立即強化","延宕強化","部分強化"]],
+["個體僅選擇在部分正確反應之後，才提供強化物稱為？","P.3-18",["部分強化","立即強化","延宕強化","連續強化"]],
+["學習者對楷模人物性格或其行為所代表的意義的模仿稱為？","P.3-20",["象徵模仿","直接模仿","綜合模仿","抽象模仿"]],
+["學習者觀察學習所學到的是抽象原則，而非具體行為的模仿稱為？","P.3-20",["抽象模仿","直接模仿","綜合模仿","象徵模仿"]],
+["學習機能中何者是理解的原動力，在學習上始終佔著最重要的地位？","P.3-34",["想","聽","看","講"]],
+["學習機能中何者在學習的接受方面，佔有極為重要的地位？","P.3-35",["聽","想","看","講"]],
+["學習機能中何者在學習的接受方面效率最高？","P.3-35",["看","想","聽","講"]],
+["準備原則中，學員(生)準備不包括？","P.4-05",["布置環境","成熟度","過去訓練背景","接受能力"]],
+["準備原則中，教官(師)準備不包括？","P.4-05",["成熟度","選擇教材","了解教學目標","布置環境"]],
+["類化原則中，教材排列不包括？","P.4-07",["由抽象到具體","由簡單而複雜","由近而遠","由易到難"]],
+["領導討論教學法中發問方法不包括？","P.4-22",["間接發問法","全體思考法","修辭發問法","直接發問法"]],
+["實施討論教學法，參加人數之限制約為多少人較適切？","P.4-24",["7-15人","8-16人","10-20人","15-30人"]],
+["討論教學法與演講教學法相比較，所需時間比例約為？","P.4-24",["3比1","1比3","4比3","2比3"]],
+["何者非練習教學法之步驟？","P.4-31",["教官(師)準備","反覆練習","引起興趣","考查成績"]],
+["練習教學法中維持練習興趣的最好方法？","P.4-37",["變化練習方法","不斷操演","反覆練習","持續指導"]],
+["實施協同教學法最重要的是？以上何者為非","P.4-40",["說明規則","教學","評鑑","共同計畫"]],
+["協同教學主要方式不包括？","P.4-40",["小班教學","小組討論或活動","大班教學","獨立學習"]],
+["何者不是合作教學法基本原理？","P.4-43",["合作結構","任務結構","酬償結構","權威結構"]],
+["合作教學法中與共同分享團體努力成果之策略為？","P.4-44",["團體研究","協同學藝競賽","拼圖式教學","學員(生)協同成就分組學習"]],
+["為了學習者自我實現學習成就而發表之教學法為？","P.4-45",["發表","思考","合作","練習教學法"]],
+["電腦輔助教學最簡單的目的是要？","P.4-53",["教","學","做","用"]],
+["電腦輔助教學中，互動性因學習情況區分為何者，何者為非？","P.4-54",["被動式互動","反應式互動","主動式學習","雙向式互動"]],
+["下列何者不是教案內容？","P.4-70",["規則說明","教學目的","教學方法","指定作業"]],
+["教學上所應用的各種媒體，稱之為？","P.5-01",["教學媒體","教案","教材","教學器材"]],
+["激發學員(生)的何者，能引起其學習的動機和興趣？","P.5-10",["好奇心","認知度","上進心","行為模式"]],
+["何者能填補記憶的真空，供給思想的基本材料，以啟發學員(生)的思想，使學員(生)有訓練重組經驗能力的機會？","P.5-10",["教學媒體","教案","教材","教學器材"]],
+["學員(生)應能將何者與真實的東西連貫在一起，甚至將其所學應用在實際工作上？","P.5-10",["教學媒體","教案","教材","教學器材"]],
+["以教學觀點而言，大部分人的學習是以何者為導向？","P.5-12",["視覺","聽覺","教學器材","感覺"]],
+["對新任教官(師)或態度過於莊嚴的教官(師)，運用何者可避免視線正面接觸，使雙方心情鬆弛片刻，以轉移雙方嚴肅、不安的情緒？","P.5-12",["黑(白)板","圖表","專案討論","全部皆是"]],
+["透明教材(投影片)之優點為何者，消除教官(師)與學員(生)問題的傳達障礙，加強視、聽效果，掌握學員(生)學習效果？","P.5-14",["面對面教學","討論教學","編序式教學","練習式教學"]],
+["在進行教學簡報的製作之前，必須依據何者的目標與需求，規劃教學簡報的大綱及腳本？","P.5-18",["教學","教案","教材","教學器材"]],
+["將某一訓練機件分解或切割，以顯示其內部構造及動作原理該裝備為？","P.5-22",["解部訓練裝備","分解訓練裝備","真實裝備","可操作的訓練裝備"]],
+["教學活動的設計、教學內容的選擇、教學方法的應用、學員(生)作業的指導，以及學習效果的評量，為班級經營中之何種內容？","P.6-03",["教學經營","行政經營","自治活動","常規輔導"]],
+["教室的座落方向、通風、整潔、光線、課桌椅的擺設……等，為班級經營中之何種內容？","P.6-04",["班級環境","教學經營","自治活動","常規輔導"]],
+["班級氣氛主要探討的內容有何者，以上何者為非？","P.6-04",["學校規定","師生關係與學習","教官(師)教導方式與班級氣氛","學員(生)同儕團體中的人際關係"]],
+["班級經營的功能，不僅是防止學員(生)不良行為的產生，而且更重要的是？","P.6-04",["提高學習效果","降低學習效果","產生逃避心態","降低學習意願"]],
+["影響班級行為的因素之個人因素包括何者，以上何者為非？","P.6-06",["座位安排","人格特質","教學態度","教學行為"]],
+["影響班級行為的因素之環境因素包括何者，以上何者為非？","P.6-06",["團體因素","物理因素","教育因素","社會因素"]],
+["影響班級行為的因素之掌握班級經營的特性不包括？","P.6-07",["公平性","整體性","適應性","啟發性"]],
+["班務處理應考慮事情的輕重緩急，係指應掌握班級經營之何種特性？","P.6-08",["優先性","啟發性","創新性","合作性"]],
+["下列何者與學生關係最密切，接觸最多，影響最大？","P.6-08",["輔導教官","一般教官","專業教官","行政人員"]],
+["「教育即生活、教育即生長、教育即經驗之改造」，是教育的何種學說？","P.6-09",["生長說","自我實現說","社會化說","生活說"]],
+["「教育係造成學習者由外而內的改變，以符合社會需求」，是教育的何種學說？","P.6-09",["社會化說","生長說","自我實現說","需求說"]],
+["「教育即激發個人潛能生長與表現」，是教育的何種學說？","P.6-09",["自我實現說","生長說","社會化說","需求說"]],
+["有教無類的理想，必須輔以下列何種原則，方能發揮教育的預期功能？","P.6-13",["因材施教","人盡其材","物盡其用","寓教於樂"]],
+["輔導教官的任務，就教育輔導而言不包括下列何者？","P.6-16",["家庭輔導","學業輔導","職業輔導","生活輔導"]],
+["品德的修養對輔導教官(師)特別重要，品德修養不包括？","P.6-29",["治國","修己","待人","善群"]],
+["溝通障礙，可以來自任何一種溝通的要素。下列何種非溝通障礙的要素？","P.6-33",["傳導","溝通者","訊息","接受者"]],
+["教官(師)講述的要求不包括？","P.6-34",["儀態","清晰","系統","生動"]],
+["輔導是何者之重要途徑，以上何者為非？","P.7-02",["教育人才","發掘人才","任用人才","發展人才"]],
+["何者是基於人類才智之累積與保持？","P.7-03",["文化發展","社會進化","文化成長","文明發展"]],
+["輔導工作是以何者為主旨？","P.7-04",["服務","專業","教育","發明"]],
+["何者的運用與分析，需要特別的訓練？","P.7-07",["測驗","轉介","保密","輔導"]],
+["何者是個人行為特性，藉以描述一個人對環境獨特的順應？","P.7-13",["人格","抗壓","人際關係","後天影響"]],
+["在諮商過程中，僅傾聽學員(生)敘述問題而不隨意詢問或表達自己意見的是？","P.7-14",["構成諮商的情境","敘述問題的技巧","決定諮商的方法","建立開始的關係"]],
+["在諮商主要技術中，指導當事人趨向解決問題的途徑的是？","P.7-16",["引導技術","接納技術","終結技術","開始技術"]],
+["在諮商主要技術中，使當事人能滿意而愉快的離去，且能樂意的希望有再次會談的機會的是？","P.7-17",["終結技術","引導技術","接納技術","開始技術"]],
+["綜合一切了解的方法，並予以價值的評定稱為？","P.8-01",["評估","考查","測量","考試"]],
+["通常用來評定學生在情意方面(如理想的建立、態度的形成等)或動作技能方面學習表現好壞的一種評量方式為？","P.8-10",["實作評量","口試評量","安置評量","總結評量"]],
+["測驗結果能否反映出我們所要測量特質的程度稱為？","P.8-16",["效度","信度","客觀性","可用性"]],
+["一個測驗於不同時間或使用類似測驗題目在不同測試狀況下，重複對同一受試者施測所得分數之一致性稱為？","P.8-16",["信度","效度","客觀性","可用性"]],
+["下列何者非閱卷之方法？","P.8-18",["隨機批改","預定標準","比較評閱","分等評閱"]],
+["下列何者非診斷學員(生)學習困難之方法？","P.8-22",["逼問","觀察法","分析作業法","會談"]],
+["下列何者非補救教學之方法？","P.8-23",["自修","再教學","個別指導","增加練習"]],
+["何種命題評分較不客觀，容易摻雜主觀的成見？","P.8-27",["申論題","選擇題","是非題","填充題"]],
+["何種命題評較注重語文表達能力、比較分析能力？","P.8-28",["申論題","選擇題","是非題","填充題"]],
+["下列何者為自由反應題？","P.8-29",["簡答題","是非題","選擇題","配合題"]],
+["下列何者為限制反應題？","P.8-29",["選擇題","填充題","簡答題","申論題"]],
+["撰擬選擇題的原則中，每題所列答案數目應該一致，以多少為宜？","P.8-31",["四至五個","一至二個","二至三個","三至四個"]],
+["風險評估作業會議紀錄及決議事項應保存？","P.9-03",["1年","2年","3年","視長官決定"]],
+["因為風險大於利益，所以不執行該作業為風險控制之？","P.9-04",["拒絕","轉移","避免","減低"]],
+["用不同方法執行這項任務為風險控制之？","P.9-04",["避免","分散","延後","拒絕"]],
+["新的科技可能會降低風險為風險控制之？","P.9-04",["延後","分散","避免","拒絕"]],
+["使用替代品為風險控制之？","P.9-04",["轉移","分散","避免","延後"]],
+["降低個人或個別系統之曝險率為風險控制之？","P.9-05",["分散","避免","延後","轉移"]],
+["增列預算以備預期的損失為風險控制之？","P.9-05",["補償","分散","延後","轉移"]],
+["增加安全裝備為風險控制之？","P.9-05",["減低","分散","補償","轉移"]],
+];
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+const LETTERS = ['A','B','C','D'];
+
+const questions = RAW.map((row, idx) => {
+  const [text, ref, opts] = row;
+  const originalCorrect = opts[0]; // source answer is always the first listed option
+  const order = shuffle([0,1,2,3]);
+  const shuffledOpts = order.map(i => opts[i]);
+  const correctIndex = shuffledOpts.indexOf(originalCorrect);
+  return {
+    num: idx+1,
+    text, ref,
+    originalCorrect,
+    options: shuffledOpts,
+    correctIndex,
+    selected: null
+  };
+});
+
+const wrongSet = new Set(); // question nums that need review (last graded as wrong or blank)
+let reviewMode = false;
+
+const BATCH_SIZE = 10;
+const totalBatches = Math.ceil(questions.length / BATCH_SIZE);
+let currentBatch = 0; // zero-indexed
+
+const container = document.getElementById('quizContainer');
+const progressFill = document.getElementById('progressFill');
+const progressCount = document.getElementById('progressCount');
+const batchTabs = document.getElementById('batchTabs');
+const submitBatchLabel = document.getElementById('submitBatchLabel');
+const batchShell = document.getElementById('batchShell');
+const reviewText = document.getElementById('reviewText');
+const startReviewBtn = document.getElementById('startReviewBtn');
+const normalControls = document.getElementById('normalControls');
+const reviewControls = document.getElementById('reviewControls');
+
+function updateReviewUI(){
+  const n = wrongSet.size;
+  if(n === 0){
+    reviewText.textContent = '目前沒有錯題需要複習';
+    startReviewBtn.disabled = true;
+    startReviewBtn.textContent = '開始複習錯題';
+  } else {
+    reviewText.textContent = `已彙整 ${n} 題答錯／未答的題目`;
+    startReviewBtn.disabled = false;
+    startReviewBtn.textContent = `開始複習錯題 (${n})`;
+  }
+}
+
+function reshuffleQuestion(q){
+  const order = shuffle([0,1,2,3]);
+  const newOpts = order.map(i => q.options[i]);
+  q.options = newOpts;
+  q.correctIndex = newOpts.indexOf(q.originalCorrect);
+  q.selected = null;
+}
+
+function enterReviewMode(){
+  if(wrongSet.size === 0) return;
+  reviewMode = true;
+  batchShell.style.display = 'none';
+  normalControls.style.display = 'none';
+  reviewControls.style.display = 'flex';
+  const list = questions.filter(q => wrongSet.has(q.num));
+  list.forEach(reshuffleQuestion);
+  renderQuestions(list, true);
+  document.getElementById('resultPanel').classList.remove('show');
+  window.scrollTo({top: document.querySelector('.progress-wrap').offsetTop - 8, behavior:'smooth'});
+}
+
+function exitReviewMode(){
+  reviewMode = false;
+  batchShell.style.display = 'flex';
+  normalControls.style.display = 'flex';
+  reviewControls.style.display = 'none';
+  document.getElementById('resultPanel').classList.remove('show');
+  renderBatch();
+}
+
+startReviewBtn.addEventListener('click', enterReviewMode);
+document.getElementById('backToAllBtn').addEventListener('click', exitReviewMode);
+document.getElementById('reshuffleReviewBtn').addEventListener('click', () => {
+  const list = questions.filter(q => wrongSet.has(q.num));
+  if(list.length === 0) return;
+  list.forEach(reshuffleQuestion);
+  renderQuestions(list, true);
+  document.getElementById('resultPanel').classList.remove('show');
+});
+
+function batchRange(batchIdx){
+  const start = batchIdx * BATCH_SIZE;
+  const end = Math.min(start + BATCH_SIZE, questions.length);
+  return [start, end];
+}
+
+function renderTabs(){
+  batchTabs.innerHTML = '';
+  for(let b=0; b<totalBatches; b++){
+    const [start,end] = batchRange(b);
+    const tab = document.createElement('div');
+    tab.className = 'batch-tab';
+    tab.textContent = `${start+1}-${end}`;
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    tab.appendChild(dot);
+    const rangeQs = questions.slice(start,end);
+    const allAnswered = rangeQs.every(q => q.selected !== null);
+    if(allAnswered) tab.classList.add('done');
+    if(b === currentBatch) tab.classList.add('active');
+    tab.addEventListener('click', () => { currentBatch = b; renderBatch(); });
+    batchTabs.appendChild(tab);
+  }
+}
+
+function renderBatch(){
+  const [start,end] = batchRange(currentBatch);
+  submitBatchLabel.textContent = `${start+1}-${end}`;
+  renderTabs();
+  renderQuestions(questions.slice(start,end));
+  updateProgress();
+  window.scrollTo({top: document.querySelector('.progress-wrap').offsetTop - 8, behavior:'smooth'});
+}
+
+document.getElementById('prevBatch').addEventListener('click', () => {
+  currentBatch = Math.max(0, currentBatch - 1);
+  renderBatch();
+});
+document.getElementById('nextBatch').addEventListener('click', () => {
+  currentBatch = Math.min(totalBatches - 1, currentBatch + 1);
+  renderBatch();
+});
+
+function renderQuestions(list, isReview){
+  container.innerHTML = '';
+  if(isReview){
+    const banner = document.createElement('div');
+    banner.className = 'review-banner';
+    banner.innerHTML = `<span>✎</span><span>錯題複習模式：以下共 ${list.length} 題，選項已重新洗牌，答對後將從錯題本移除</span>`;
+    container.appendChild(banner);
+  }
+  list.forEach(q => {
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.id = 'card-' + q.num;
+
+    const head = document.createElement('div');
+    head.className = 'q-head';
+    head.innerHTML = `<span class="q-num">${String(q.num).padStart(3,'0')}</span><span class="q-text">${q.text}</span>`;
+    card.appendChild(head);
+
+    const ref = document.createElement('div');
+    ref.className = 'q-ref';
+    ref.textContent = q.ref;
+    card.appendChild(ref);
+
+    const optsWrap = document.createElement('div');
+    optsWrap.className = 'options';
+    q.options.forEach((optText, i) => {
+      const opt = document.createElement('div');
+      opt.className = 'opt';
+      opt.dataset.index = i;
+      opt.innerHTML = `<span class="opt-letter">${LETTERS[i]}</span><span>${optText}</span>`;
+      opt.addEventListener('click', () => selectOption(q, i));
+      optsWrap.appendChild(opt);
+    });
+    card.appendChild(optsWrap);
+
+    const status = document.createElement('div');
+    status.className = 'q-status';
+    status.id = 'status-' + q.num;
+    card.appendChild(status);
+
+    container.appendChild(card);
+  });
+  updateProgress();
+}
+
+function selectOption(q, i){
+  q.selected = i;
+  const card = document.getElementById('card-' + q.num);
+  card.classList.add('answered');
+  [...card.querySelectorAll('.opt')].forEach(el => {
+    el.classList.toggle('selected', Number(el.dataset.index) === i);
+  });
+  updateProgress();
+  if(!reviewMode) renderTabs();
+}
+
+function updateProgress(){
+  const answered = questions.filter(q => q.selected !== null).length;
+  const pct = Math.round((answered/questions.length)*100);
+  progressFill.style.width = pct + '%';
+  progressCount.textContent = answered + ' / ' + questions.length;
+}
+
+let startTime = Date.now();
+let timerInterval = setInterval(() => {
+  const s = Math.floor((Date.now()-startTime)/1000);
+  const m = String(Math.floor(s/60)).padStart(2,'0');
+  const sec = String(s%60).padStart(2,'0');
+  document.getElementById('metaTimer').textContent = `作答時間：${m}:${sec}`;
+}, 1000);
+
+function gradeCard(q){
+  const card = document.getElementById('card-' + q.num);
+  if(!card) return null; // not currently rendered
+  card.classList.add('graded');
+  const opts = [...card.querySelectorAll('.opt')];
+  if(q.selected === null){
+    document.getElementById('status-'+q.num).innerHTML = '未作答';
+    document.getElementById('status-'+q.num).className = 'q-status bad';
+    opts[q.correctIndex].classList.add('reveal-correct');
+    return 'blank';
+  } else if(q.selected === q.correctIndex){
+    card.classList.add('correct');
+    document.getElementById('status-'+q.num).innerHTML = '✓ 正確';
+    document.getElementById('status-'+q.num).className = 'q-status ok';
+    opts[q.correctIndex].classList.add('reveal-correct');
+    return 'correct';
+  } else {
+    card.classList.add('wrong');
+    document.getElementById('status-'+q.num).innerHTML = `✗ 錯誤，正確答案為 ${LETTERS[q.correctIndex]}`;
+    document.getElementById('status-'+q.num).className = 'q-status bad';
+    opts[q.selected].classList.add('reveal-wrong');
+    opts[q.correctIndex].classList.add('reveal-correct');
+    return 'wrong';
+  }
+}
+
+function showResult(list, correct, wrong, blank){
+  document.getElementById('scoreNum').textContent = correct;
+  document.querySelector('.score-label').textContent = `分 / ${list.length}`;
+  document.getElementById('correctCount').textContent = correct;
+  document.getElementById('wrongCount').textContent = wrong;
+  document.getElementById('blankCount').textContent = blank;
+  document.getElementById('resultPanel').classList.add('show');
+  document.getElementById('resultPanel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function recordWrongState(q, r){
+  if(r === 'correct') wrongSet.delete(q.num);
+  else wrongSet.add(q.num); // 'wrong' or 'blank' both need review
+}
+
+document.getElementById('submitBtn').addEventListener('click', () => {
+  const [start,end] = batchRange(currentBatch);
+  const list = questions.slice(start,end);
+  let correct = 0, wrong = 0, blank = 0;
+  list.forEach(q => {
+    const r = gradeCard(q);
+    recordWrongState(q, r);
+    if(r === 'correct') correct++;
+    else if(r === 'wrong') wrong++;
+    else blank++;
+  });
+  renderTabs();
+  updateReviewUI();
+  showResult(list, correct, wrong, blank);
+});
+
+document.getElementById('submitAllBtn').addEventListener('click', () => {
+  let correct = 0, wrong = 0, blank = 0;
+  questions.forEach(q => {
+    let r;
+    const card = document.getElementById('card-' + q.num);
+    if(card){
+      r = gradeCard(q);
+    } else {
+      r = q.selected === null ? 'blank' : (q.selected === q.correctIndex ? 'correct' : 'wrong');
+    }
+    recordWrongState(q, r);
+    if(r === 'correct') correct++;
+    else if(r === 'wrong') wrong++;
+    else blank++;
+  });
+  clearInterval(timerInterval);
+  renderTabs();
+  updateReviewUI();
+  showResult(questions, correct, wrong, blank);
+});
+
+document.getElementById('submitReviewBtn').addEventListener('click', () => {
+  const list = questions.filter(q => wrongSet.has(q.num));
+  let correct = 0, wrong = 0, blank = 0;
+  list.forEach(q => {
+    const r = gradeCard(q);
+    recordWrongState(q, r);
+    if(r === 'correct') correct++;
+    else if(r === 'wrong') wrong++;
+    else blank++;
+  });
+  updateReviewUI();
+  showResult(list, correct, wrong, blank);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  location.reload();
+});
+
+updateReviewUI();
+renderBatch();
+</script>
+</body>
+</html>
